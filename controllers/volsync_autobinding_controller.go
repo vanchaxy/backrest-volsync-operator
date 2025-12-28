@@ -147,7 +147,10 @@ func (r *VolSyncAutoBindingReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	rd.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationDestination"})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(rs).
+		Named("volsync-autobinding").
+		Watches(rs, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}}}
+		})).
 		Watches(rd, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}}}
 		})).
