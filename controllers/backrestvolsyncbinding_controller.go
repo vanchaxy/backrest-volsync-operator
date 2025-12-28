@@ -40,6 +40,8 @@ const (
 type BackrestVolSyncBindingReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	OperatorConfig types.NamespacedName
 }
 
 func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -48,6 +50,22 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 	var binding v1alpha1.BackrestVolSyncBinding
 	if err := r.Get(ctx, req.NamespacedName, &binding); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if cfg, err := LoadOperatorConfig(ctx, r.Client, r.OperatorConfig); err != nil {
+		return ctrl.Result{}, err
+	} else if cfg.Paused {
+		meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
+			Type:               conditionReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "Paused",
+			Message:            "Operator is paused by BackrestVolSyncOperatorConfig",
+			ObservedGeneration: binding.Generation,
+			LastTransitionTime: metav1.Now(),
+		})
+		binding.Status.ObservedGeneration = binding.Generation
+		_ = r.Status().Update(ctx, &binding)
+		return ctrl.Result{}, nil
 	}
 
 	// Default reconcile requeue on transient errors.
@@ -204,6 +222,23 @@ func (r *BackrestVolSyncBindingReconciler) SetupWithManager(mgr ctrl.Manager) er
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.BackrestVolSyncBinding{}).
+		Watches(&v1alpha1.BackrestVolSyncOperatorConfig{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			if r.OperatorConfig.Name == "" || r.OperatorConfig.Namespace == "" {
+				return nil
+			}
+			if obj.GetNamespace() != r.OperatorConfig.Namespace || obj.GetName() != r.OperatorConfig.Name {
+				return nil
+			}
+			var list v1alpha1.BackrestVolSyncBindingList
+			if err := r.List(ctx, &list, client.InNamespace(obj.GetNamespace())); err != nil {
+				return nil
+			}
+			reqs := make([]reconcile.Request, 0, len(list.Items))
+			for i := range list.Items {
+				reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: list.Items[i].Namespace, Name: list.Items[i].Name}})
+			}
+			return reqs
+		})).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
 			secret, ok := obj.(*corev1.Secret)
 			if !ok {

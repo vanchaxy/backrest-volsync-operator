@@ -1,0 +1,73 @@
+name: Publish Helm Chart (GHCR OCI)
+
+on:
+  push:
+    tags: ['chart-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Chart version (e.g. 0.1.0). If empty, uses Chart.yaml as-is.'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: helm-chart-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Log in to GHCR (Helm registry)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Set chart version (from tag or input)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CHART_FILE="charts/backrest-volsync-operator/Chart.yaml"
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # Expect tags like chart-v0.1.0
+            VERSION="${GITHUB_REF_NAME#chart-v}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+
+          if [[ -n "${VERSION}" ]]; then
+            echo "Setting Chart.yaml version/appVersion to ${VERSION}"
+            sed -i -E "s/^version:.*$/version: ${VERSION}/" "${CHART_FILE}"
+            sed -i -E "s/^appVersion:.*$/appVersion: \"${VERSION}\"/" "${CHART_FILE}"
+          else
+            echo "No version override provided; using Chart.yaml version"
+          fi
+
+          echo "Final Chart.yaml:"
+          cat "${CHART_FILE}"
+
+      - name: Lint chart
+        run: |
+          helm lint charts/backrest-volsync-operator
+
+      - name: Package chart
+        run: |
+          mkdir -p dist
+          helm package charts/backrest-volsync-operator -d dist
+
+      - name: Push to GHCR (OCI)
+        run: |
+          helm push dist/*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts

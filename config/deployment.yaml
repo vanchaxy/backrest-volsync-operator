@@ -25,6 +25,11 @@ spec:
         - name: manager
           image: ghcr.io/jogotcha/backrest-volsync-operator:latest
           imagePullPolicy: Always
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -35,6 +40,8 @@ spec:
             - --leader-elect=true
             - --metrics-bind-address=:8080
             - --health-probe-bind-address=:8081
+            - --operator-config-name=backrest-volsync-operator
+            - --operator-config-namespace=$(POD_NAMESPACE)
           ports:
             - name: metrics
               containerPort: 8080

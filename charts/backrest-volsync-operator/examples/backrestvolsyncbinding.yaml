@@ -1,0 +1,14 @@
+apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncBinding
+metadata:
+  name: my-app
+  namespace: monitoring
+spec:
+  backrest:
+    url: http://backrest.monitoring.svc:9898
+  source:
+    kind: ReplicationSource
+    name: my-app-data
+  repo:
+    idOverride: my-app-data
+    autoUnlock: true

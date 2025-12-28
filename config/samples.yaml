@@ -1,4 +1,21 @@
 apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncOperatorConfig
+metadata:
+  name: backrest-volsync-operator
+  namespace: monitoring
+spec:
+  paused: false
+  defaultBackrest:
+    url: http://backrest.monitoring.svc:9898
+    # authRef:
+    #   name: backrest-auth
+  bindingGeneration:
+    # Disabled | Annotated | All
+    policy: Annotated
+    defaultRepo:
+      autoUnlock: true
+---
+apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
 metadata:
   name: uptime-kuma-config-source

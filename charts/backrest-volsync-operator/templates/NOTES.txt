@@ -1,0 +1,7 @@
+1. The operator Deployment is: {{ include "backrest-volsync-operator.fullname" . }}
+
+2. Watch logs:
+   kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "backrest-volsync-operator.fullname" . }} -c manager
+
+3. Example CR (not installed by default):
+   See charts/backrest-volsync-operator/examples/backrestvolsyncbinding.yaml

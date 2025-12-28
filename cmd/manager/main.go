@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/stdr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,11 +25,15 @@ func main() {
 	var probeAddr string
 	var leaderElect bool
 	var logLevel string
+	var operatorConfigName string
+	var operatorConfigNamespace string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&leaderElect, "leader-elect", true, "Enable leader election for controller manager.")
 	flag.StringVar(&logLevel, "log-level", "info", "Log level: debug|info")
+	flag.StringVar(&operatorConfigName, "operator-config-name", "", "Name of BackrestVolSyncOperatorConfig (optional)")
+	flag.StringVar(&operatorConfigNamespace, "operator-config-namespace", "", "Namespace of BackrestVolSyncOperatorConfig (optional)")
 	flag.Parse()
 
 	logger := newLogger(logLevel)
@@ -55,10 +60,20 @@ func main() {
 	}
 
 	if err := (&controllers.BackrestVolSyncBindingReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller")
+		os.Exit(1)
+	}
+
+	if err := (&controllers.VolSyncAutoBindingReconciler{
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
+	}).SetupWithManager(mgr); err != nil {
+		logger.Error(err, "unable to create VolSync auto-binding controller")
 		os.Exit(1)
 	}
 

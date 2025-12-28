@@ -3,5 +3,6 @@ kind: Kustomization
 
 resources:
   - crd.yaml
+  - operatorconfig_crd.yaml
   - rbac.yaml
   - deployment.yaml

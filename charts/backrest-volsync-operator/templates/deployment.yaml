@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "backrest-volsync-operator.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "backrest-volsync-operator.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "backrest-volsync-operator.fullname" . }}
+    spec:
+      serviceAccountName: {{ include "backrest-volsync-operator.serviceAccountName" . }}
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: manager
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          args:
+            - --leader-elect={{ ternary "true" "false" .Values.leaderElection.enabled }}
+            - --metrics-bind-address={{ include "backrest-volsync-operator.metricsBindAddress" . }}
+            - --health-probe-bind-address={{ include "backrest-volsync-operator.healthProbeBindAddress" . }}
+            - --operator-config-name={{ .Values.operatorConfig.name | quote }}
+            - --operator-config-namespace=$(POD_NAMESPACE)
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+            - name: probes
+              containerPort: {{ .Values.healthProbe.port }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: probes
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: probes
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

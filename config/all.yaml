@@ -102,6 +102,93 @@ spec:
                       message:
                         type: string
 ---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: backrestvolsyncoperatorconfigs.backrest.garethgeorge.com
+spec:
+  group: backrest.garethgeorge.com
+  scope: Namespaced
+  names:
+    plural: backrestvolsyncoperatorconfigs
+    singular: backrestvolsyncoperatorconfig
+    kind: BackrestVolSyncOperatorConfig
+    shortNames:
+      - bvoc
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              properties:
+                paused:
+                  type: boolean
+                defaultBackrest:
+                  type: object
+                  properties:
+                    url:
+                      type: string
+                    authRef:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                bindingGeneration:
+                  type: object
+                  properties:
+                    policy:
+                      type: string
+                      enum: ["", Disabled, Annotated, All]
+                    defaultRepo:
+                      type: object
+                      properties:
+                        autoUnlock:
+                          type: boolean
+                        autoInitialize:
+                          type: boolean
+                        extraFlags:
+                          type: array
+                          items:
+                            type: string
+                        envAllowlist:
+                          type: array
+                          items:
+                            type: string
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, status, lastTransitionTime, reason, message]
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -115,10 +202,13 @@ metadata:
 rules:
   - apiGroups: ["backrest.garethgeorge.com"]
     resources: ["backrestvolsyncbindings"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "create", "patch", "update"]
   - apiGroups: ["backrest.garethgeorge.com"]
     resources: ["backrestvolsyncbindings/status"]
     verbs: ["get", "patch", "update"]
+  - apiGroups: ["backrest.garethgeorge.com"]
+    resources: ["backrestvolsyncoperatorconfigs"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["volsync.backube"]
     resources: ["replicationsources", "replicationdestinations"]
     verbs: ["get", "list", "watch"]
@@ -165,10 +255,17 @@ spec:
         - name: manager
           image: backrest-volsync-operator:dev
           imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           args:
             - --leader-elect=true
             - --metrics-bind-address=:8080
             - --health-probe-bind-address=:8081
+            - --operator-config-name=backrest-volsync-operator
+            - --operator-config-namespace=$(POD_NAMESPACE)
           ports:
             - name: metrics
               containerPort: 8080

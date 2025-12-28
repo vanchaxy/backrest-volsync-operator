@@ -1,0 +1,58 @@
+# Default values for backrest-volsync-operator.
+
+# By default, keep resource names consistent with the existing manifests.
+fullnameOverride: backrest-volsync-operator
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/jogotcha/backrest-volsync-operator
+  tag: latest
+  pullPolicy: Always
+
+# Optional image pull secrets (e.g. for private GHCR)
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  # If empty, defaults to the chart fullname
+  name: ""
+
+rbac:
+  create: true
+
+leaderElection:
+  enabled: true
+
+metrics:
+  port: 8080
+  # If empty, computed from port (":<port>")
+  bindAddress: ""
+
+healthProbe:
+  port: 8081
+  # If empty, computed from port (":<port>")
+  bindAddress: ""
+
+operatorConfig:
+  # Name of BackrestVolSyncOperatorConfig in the release namespace.
+  name: backrest-volsync-operator
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
