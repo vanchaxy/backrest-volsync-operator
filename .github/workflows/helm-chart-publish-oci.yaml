@@ -21,7 +21,7 @@ concurrency:
 jobs:
   publish:
     if: >-
-      ${{ github.event_name != 'push' || !(contains(join(github.event.commits.*.message, '\n'), '[skip-ci]') || contains(join(github.event.commits.*.message, '\n'), '[skip ci]')) }}
+      ${{ github.event_name != 'push' || !(contains(toJson(github.event.commits), '[skip-ci]') || contains(toJson(github.event.commits), '[skip ci]') || contains(toJson(github.event.head_commit), '[skip-ci]') || contains(toJson(github.event.head_commit), '[skip ci]')) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
