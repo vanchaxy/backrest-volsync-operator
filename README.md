@@ -121,5 +121,17 @@ kubectl -n monitoring get backrestvolsyncbinding <name> -o yaml
 
 Confirm Backrest shows the repo:
 
-- Use the Backrest UI (or port-forward the service) and verify the repo ID exists/updates.
-- The operator logs a line like `Backrest repo applied` with the repo ID on success.
+- The Backrest Service in this repo's examples is `backrest` in namespace `monitoring` (port `9898`).
+
+Port-forward the Backrest UI/API:
+
+```sh
+kubectl -n monitoring port-forward svc/backrest 9898:9898
+```
+
+Then open `http://127.0.0.1:9898` and confirm the repo IDs exist/updated.
+
+Notes:
+
+- The operator intentionally does **not** log or store secret values. If a reconcile fails, status will contain only non-sensitive metadata and an error hash.
+- On success, the operator logs `Backrest repo applied` with only the repo ID + VolSync reference.
