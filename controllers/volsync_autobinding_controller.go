@@ -62,6 +62,11 @@ func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.R
 
 	logger.Info("Found VolSync object", "kind", kind, "name", vsObj.GetName())
 
+	if !cfg.IsVolSyncKindAllowed(kind) {
+		logger.Info("Auto-binding not enabled for this kind; skipping", "kind", kind, "name", vsObj.GetName())
+		return ctrl.Result{}, nil
+	}
+
 	allowed := isAutoBindingAllowed(cfg.BindingPolicy, vsObj)
 	if !allowed {
 		logger.Info("Auto-binding not allowed for this object", "kind", kind, "name", vsObj.GetName())

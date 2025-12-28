@@ -164,6 +164,10 @@ spec:
   bindingGeneration:
     # Disabled | Annotated | All
     policy: Annotated
+    # Optional restrict which VolSync kinds are eligible for auto-binding.
+    # Allowed values: ReplicationSource | ReplicationDestination
+    # If omitted/empty, both kinds are allowed.
+    # kinds: [ReplicationSource, ReplicationDestination]
     defaultRepo:
       autoUnlock: true
 ```

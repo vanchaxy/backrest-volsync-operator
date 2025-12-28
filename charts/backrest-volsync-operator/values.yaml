@@ -52,6 +52,11 @@ operatorConfig:
   # This maps to spec.bindingGeneration.policy.
   bindingGeneration: Annotated
 
+  # Optional restrict eligible VolSync kinds for auto-binding.
+  # Allowed values: ReplicationSource | ReplicationDestination
+  # If empty, both kinds are allowed.
+  bindingGenerationKinds: []
+
   # Defaults applied to generated bindings.
   defaultRepo: {}
 

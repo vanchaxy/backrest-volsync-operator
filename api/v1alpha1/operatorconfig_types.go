@@ -38,6 +38,15 @@ type BindingGenerationSpec struct {
 	// - All: auto-create for all VolSync objects (unless explicitly opted out)
 	Policy string `json:"policy,omitempty"`
 
+	// Kinds restricts which VolSync object kinds are eligible for auto-binding.
+	//
+	// Allowed values:
+	// - ReplicationSource
+	// - ReplicationDestination
+	//
+	// If omitted or empty, both kinds are allowed.
+	Kinds []string `json:"kinds,omitempty"`
+
 	// DefaultRepo provides defaults for generated bindings. Fields are optional.
 	DefaultRepo BackrestRepoSpec `json:"defaultRepo,omitempty"`
 }
@@ -68,6 +77,9 @@ func (in *BackrestVolSyncOperatorConfig) DeepCopyInto(out *BackrestVolSyncOperat
 	}
 	if in.Spec.BindingGeneration.DefaultRepo.ExtraFlags != nil {
 		out.Spec.BindingGeneration.DefaultRepo.ExtraFlags = append([]string(nil), in.Spec.BindingGeneration.DefaultRepo.ExtraFlags...)
+	}
+	if in.Spec.BindingGeneration.Kinds != nil {
+		out.Spec.BindingGeneration.Kinds = append([]string(nil), in.Spec.BindingGeneration.Kinds...)
 	}
 	if in.Spec.BindingGeneration.DefaultRepo.EnvAllowlist != nil {
 		out.Spec.BindingGeneration.DefaultRepo.EnvAllowlist = append([]string(nil), in.Spec.BindingGeneration.DefaultRepo.EnvAllowlist...)

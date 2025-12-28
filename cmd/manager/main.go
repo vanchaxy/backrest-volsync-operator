@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,6 +36,9 @@ func main() {
 	flag.StringVar(&operatorConfigName, "operator-config-name", "", "Name of BackrestVolSyncOperatorConfig (optional)")
 	flag.StringVar(&operatorConfigNamespace, "operator-config-namespace", "", "Namespace of BackrestVolSyncOperatorConfig (optional)")
 	flag.Parse()
+
+	operatorConfigName = strings.TrimSpace(strings.Trim(operatorConfigName, "\""))
+	operatorConfigNamespace = strings.TrimSpace(strings.Trim(operatorConfigNamespace, "\""))
 
 	logger := newLogger(logLevel)
 	ctrl.SetLogger(logger)

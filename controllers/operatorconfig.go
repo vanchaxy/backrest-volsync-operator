@@ -26,10 +26,19 @@ type OperatorConfigSnapshot struct {
 
 	BindingPolicy BindingGenerationPolicy
 
+	AllowedVolSyncKinds map[string]bool
+
 	DefaultBackrestURL     string
 	DefaultBackrestAuthRef *v1alpha1.SecretRef
 
 	DefaultRepo v1alpha1.BackrestRepoSpec
+}
+
+func (s OperatorConfigSnapshot) IsVolSyncKindAllowed(kind string) bool {
+	if len(s.AllowedVolSyncKinds) == 0 {
+		return true
+	}
+	return s.AllowedVolSyncKinds[kind]
 }
 
 func LoadOperatorConfig(ctx context.Context, c client.Client, nn types.NamespacedName) (OperatorConfigSnapshot, error) {
@@ -58,6 +67,28 @@ func LoadOperatorConfig(ctx context.Context, c client.Client, nn types.Namespace
 	default:
 		return OperatorConfigSnapshot{}, fmt.Errorf("invalid bindingGeneration.policy %q", policy)
 	}
+
+	// bindingGeneration.kinds defaults to allowing both VolSync kinds.
+	allowedKinds := map[string]bool{
+		"ReplicationSource":      false,
+		"ReplicationDestination": false,
+	}
+	if len(cfg.Spec.BindingGeneration.Kinds) == 0 {
+		allowedKinds["ReplicationSource"] = true
+		allowedKinds["ReplicationDestination"] = true
+	} else {
+		for _, k := range cfg.Spec.BindingGeneration.Kinds {
+			k = strings.TrimSpace(k)
+			switch k {
+			case "ReplicationSource", "ReplicationDestination":
+				allowedKinds[k] = true
+			default:
+				return OperatorConfigSnapshot{}, fmt.Errorf("invalid bindingGeneration.kinds entry %q", k)
+			}
+		}
+	}
+	// Compact map so len==0 means "allow all" is never used; we always populate.
+	snap.AllowedVolSyncKinds = allowedKinds
 
 	snap.DefaultBackrestURL = strings.TrimSpace(cfg.Spec.DefaultBackrest.URL)
 	if cfg.Spec.DefaultBackrest.AuthRef != nil && cfg.Spec.DefaultBackrest.AuthRef.Name != "" {

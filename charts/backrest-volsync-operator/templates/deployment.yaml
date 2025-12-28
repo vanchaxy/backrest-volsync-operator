@@ -34,7 +34,7 @@ spec:
             - --leader-elect={{ ternary "true" "false" .Values.leaderElection.enabled }}
             - --metrics-bind-address={{ include "backrest-volsync-operator.metricsBindAddress" . }}
             - --health-probe-bind-address={{ include "backrest-volsync-operator.healthProbeBindAddress" . }}
-            - --operator-config-name={{ .Values.operatorConfig.name | quote }}
+            - --operator-config-name={{ .Values.operatorConfig.name }}
             - --operator-config-namespace=$(POD_NAMESPACE)
           ports:
             - name: metrics

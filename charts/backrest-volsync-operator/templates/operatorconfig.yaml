@@ -16,6 +16,10 @@ spec:
   {{- end }}
   bindingGeneration:
     policy: {{ default "Annotated" .Values.operatorConfig.bindingGeneration | quote }}
+    {{- if .Values.operatorConfig.bindingGenerationKinds }}
+    kinds:
+      {{- toYaml .Values.operatorConfig.bindingGenerationKinds | nindent 6 }}
+    {{- end }}
     {{- $dr := .Values.operatorConfig.defaultRepo -}}
     {{- if or (hasKey $dr "idOverride") (hasKey $dr "autoUnlock") (hasKey $dr "autoInitialize") (hasKey $dr "extraFlags") (hasKey $dr "envAllowlist") }}
     defaultRepo:

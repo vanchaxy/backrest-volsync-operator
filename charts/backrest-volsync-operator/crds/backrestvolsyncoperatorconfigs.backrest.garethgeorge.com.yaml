@@ -43,6 +43,12 @@ spec:
                     policy:
                       type: string
                       enum: ["", Disabled, Annotated, All]
+                    kinds:
+                      type: array
+                      items:
+                        type: string
+                        enum: [ReplicationSource, ReplicationDestination]
+                      uniqueItems: true
                     defaultRepo:
                       type: object
                       properties:
