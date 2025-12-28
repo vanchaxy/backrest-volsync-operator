@@ -1,0 +1,21 @@
+### Local/private Helm values
+private_values.yaml
+
+### OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+### Go build/test artifacts
+bin/
+dist/
+coverage.out
+*.test
+*.prof
+
+### Kustomize/Helm generated output
+*.tgz
+
+### Python venv (sometimes used for scripts/tools)
+.venv/
