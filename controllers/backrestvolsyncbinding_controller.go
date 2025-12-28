@@ -10,9 +10,9 @@ import (
 	"time"
 
 	v1 "github.com/garethgeorge/backrest/gen/go/v1"
-	"github.com/johan/backrest-volsync-operator/api/v1alpha1"
-	"github.com/johan/backrest-volsync-operator/pkg/backrest"
-	"github.com/johan/backrest-volsync-operator/pkg/volsync"
+	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
+	"github.com/jogotcha/backrest-volsync-operator/pkg/backrest"
+	"github.com/jogotcha/backrest-volsync-operator/pkg/volsync"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -127,6 +127,13 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 	if err != nil {
 		return r.fail(ctx, &binding, "BackrestAddRepoFailed", err)
 	}
+
+	logger.Info(
+		"Backrest repo applied",
+		"repoID", repo.Id,
+		"volsyncKind", binding.Spec.Source.Kind,
+		"volsyncName", binding.Spec.Source.Name,
+	)
 
 	now := metav1.Now()
 	binding.Status.ResolvedRepositorySecret = repoSecretName
@@ -277,6 +284,13 @@ func (r *BackrestVolSyncBindingReconciler) loadBackrestAuth(ctx context.Context,
 }
 
 func (r *BackrestVolSyncBindingReconciler) fail(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, reason string, err error) (ctrl.Result, error) {
+	log.FromContext(ctx).Info(
+		"Reconcile failed",
+		"reason", reason,
+		"name", binding.Name,
+		"namespace", binding.Namespace,
+		"error", err.Error(),
+	)
 	meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
 		Type:               conditionReady,
 		Status:             metav1.ConditionFalse,

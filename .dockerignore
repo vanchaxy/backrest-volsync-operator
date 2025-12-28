@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+*.md
+
+# Local build outputs
+bin/
+out/
+dist/
+
+# Kubernetes manifests are not needed for building the binary
+config/
+
+# OS/editor noise
+Thumbs.db
+Desktop.ini

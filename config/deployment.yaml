@@ -14,10 +14,13 @@ spec:
         app: backrest-volsync-operator
     spec:
       serviceAccountName: backrest-volsync-operator
+      # If pulling from a private GHCR image, create a pull secret and uncomment:
+      # imagePullSecrets:
+      #   - name: ghcr-pull
       containers:
         - name: manager
-          image: backrest-volsync-operator:dev
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/jogotcha/backrest-volsync-operator:latest
+          imagePullPolicy: Always
           args:
             - --leader-elect=true
             - --metrics-bind-address=:8080

@@ -1,10 +1,10 @@
-module github.com/johan/backrest-volsync-operator
+module github.com/jogotcha/backrest-volsync-operator
 
 go 1.24.0
 
 require (
 	connectrpc.com/connect v1.19.1
-	github.com/garethgeorge/backrest v0.0.0
+	github.com/garethgeorge/backrest v1.10.1
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/stdr v1.2.2
 	k8s.io/api v0.34.1
@@ -69,5 +69,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace github.com/garethgeorge/backrest => ../backrest

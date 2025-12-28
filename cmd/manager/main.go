@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/johan/backrest-volsync-operator/api/v1alpha1"
-	"github.com/johan/backrest-volsync-operator/controllers"
+	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
+	"github.com/jogotcha/backrest-volsync-operator/controllers"
 )
 
 func main() {
