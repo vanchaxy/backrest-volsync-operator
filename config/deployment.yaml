@@ -17,10 +17,20 @@ spec:
       # If pulling from a private GHCR image, create a pull secret and uncomment:
       # imagePullSecrets:
       #   - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: manager
           image: ghcr.io/jogotcha/backrest-volsync-operator:latest
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
           args:
             - --leader-elect=true
             - --metrics-bind-address=:8080
