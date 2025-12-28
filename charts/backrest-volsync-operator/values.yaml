@@ -35,8 +35,25 @@ healthProbe:
   bindAddress: ""
 
 operatorConfig:
+  # If true, the chart will create a BackrestVolSyncOperatorConfig CR in the release namespace.
+  create: false
   # Name of BackrestVolSyncOperatorConfig in the release namespace.
   name: backrest-volsync-operator
+
+  # Spec fields for the created BackrestVolSyncOperatorConfig.
+  paused: false
+  defaultBackrest:
+    # Recommended when enabling auto-binding.
+    url: ""
+    authRef:
+      name: ""
+
+  # Policy for binding generation: Disabled | Annotated | All
+  # This maps to spec.bindingGeneration.policy.
+  bindingGeneration: Annotated
+
+  # Defaults applied to generated bindings.
+  defaultRepo: {}
 
 podSecurityContext:
   runAsNonRoot: true

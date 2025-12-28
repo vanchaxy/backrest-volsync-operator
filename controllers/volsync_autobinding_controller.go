@@ -150,18 +150,18 @@ func (r *VolSyncAutoBindingReconciler) SetupWithManager(mgr ctrl.Manager) error 
 				return nil
 			}
 			reqs := make([]reconcile.Request, 0)
-			// Enqueue all ReplicationSources.
+			// Enqueue all ReplicationSources cluster-wide.
 			var rsList unstructured.UnstructuredList
 			rsList.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationSourceList"})
-			if err := r.List(ctx, &rsList, client.InNamespace(obj.GetNamespace())); err == nil {
+			if err := r.List(ctx, &rsList); err == nil {
 				for i := range rsList.Items {
 					reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: rsList.Items[i].GetNamespace(), Name: rsList.Items[i].GetName()}})
 				}
 			}
-			// Enqueue all ReplicationDestinations.
+			// Enqueue all ReplicationDestinations cluster-wide.
 			var rdList unstructured.UnstructuredList
 			rdList.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationDestinationList"})
-			if err := r.List(ctx, &rdList, client.InNamespace(obj.GetNamespace())); err == nil {
+			if err := r.List(ctx, &rdList); err == nil {
 				for i := range rdList.Items {
 					reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: rdList.Items[i].GetNamespace(), Name: rdList.Items[i].GetName()}})
 				}

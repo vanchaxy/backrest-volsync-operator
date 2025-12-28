@@ -1,0 +1,40 @@
+{{- if .Values.operatorConfig.create -}}
+apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncOperatorConfig
+metadata:
+  name: {{ .Values.operatorConfig.name | quote }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  paused: {{ ternary "true" "false" (default false .Values.operatorConfig.paused) }}
+  {{- if .Values.operatorConfig.defaultBackrest.url }}
+  defaultBackrest:
+    url: {{ .Values.operatorConfig.defaultBackrest.url | quote }}
+    {{- if .Values.operatorConfig.defaultBackrest.authRef.name }}
+    authRef:
+      name: {{ .Values.operatorConfig.defaultBackrest.authRef.name | quote }}
+    {{- end }}
+  {{- end }}
+  bindingGeneration:
+    policy: {{ default "Annotated" .Values.operatorConfig.bindingGeneration | quote }}
+    {{- $dr := .Values.operatorConfig.defaultRepo -}}
+    {{- if or (hasKey $dr "idOverride") (hasKey $dr "autoUnlock") (hasKey $dr "autoInitialize") (hasKey $dr "extraFlags") (hasKey $dr "envAllowlist") }}
+    defaultRepo:
+      {{- if hasKey $dr "idOverride" }}
+      idOverride: {{ $dr.idOverride | quote }}
+      {{- end }}
+      {{- if hasKey $dr "autoUnlock" }}
+      autoUnlock: {{ $dr.autoUnlock }}
+      {{- end }}
+      {{- if hasKey $dr "autoInitialize" }}
+      autoInitialize: {{ $dr.autoInitialize }}
+      {{- end }}
+      {{- if hasKey $dr "extraFlags" }}
+      extraFlags:
+        {{- toYaml $dr.extraFlags | nindent 8 }}
+      {{- end }}
+      {{- if hasKey $dr "envAllowlist" }}
+      envAllowlist:
+        {{- toYaml $dr.envAllowlist | nindent 8 }}
+      {{- end }}
+    {{- end }}
+{{- end -}}
