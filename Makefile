@@ -10,8 +10,11 @@ generate:
 
 .PHONY: lint
 lint:
-	@echo "Lint is optional. Install golangci-lint to enable.";
-	@golangci-lint run ./... 2>nul || true
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run ./...; \
+	else \
+		echo "Lint skipped (golangci-lint not installed)."; \
+	fi
 
 .PHONY: test
 test:

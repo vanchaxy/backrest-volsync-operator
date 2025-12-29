@@ -1,6 +1,9 @@
 # Build the operator manager
 FROM golang:1.24 AS build
 
+ARG TARGETOS
+ARG TARGETARCH
+
 WORKDIR /src
 
 # Copy module files first for better caching
@@ -10,7 +13,7 @@ RUN go mod download
 # Copy the rest of the source
 COPY . ./
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o /out/manager ./cmd/manager
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags "-s -w" -o /out/manager ./cmd/manager
 
 # Runtime image
 FROM gcr.io/distroless/static:nonroot
