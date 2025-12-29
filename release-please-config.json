@@ -7,7 +7,7 @@
       "release-type": "go",
       "package-name": "backrest-volsync-operator",
       "include-component-in-tag": false,
-      "tag-prefix": "v",
+      "include-v-in-tag": true,
       "exclude-paths": [
         "charts"
       ]
@@ -15,8 +15,9 @@
     "charts/backrest-volsync-operator": {
       "release-type": "helm",
       "package-name": "backrest-volsync-operator",
-      "include-component-in-tag": false,
-      "tag-prefix": "chart-v"
+      "component": "chart",
+      "include-component-in-tag": true,
+      "include-v-in-tag": true
     }
   }
 }
