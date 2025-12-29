@@ -66,12 +66,6 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 		return r.updateStatus(ctx, &binding)
 	}
 
-	// Default reconcile requeue on transient errors.
-	defer func() {
-		// Ensure we never accidentally log secret material via %+v.
-		_ = logger
-	}()
-
 	if errs := validateBinding(&binding); len(errs) > 0 {
 		err := errs.ToAggregate()
 		meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"reflect"
 	"strings"
 
 	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
@@ -124,20 +125,44 @@ func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 
 	// Patch only if spec/metadata drifted.
-	patch := client.MergeFrom(existing.DeepCopy())
+	original := existing.DeepCopy()
 	mutated := existing.DeepCopy()
-	mutated.Spec = desired.Spec
+	changed := false
+
+	if !reflect.DeepEqual(mutated.Spec, desired.Spec) {
+		mutated.Spec = desired.Spec
+		changed = true
+	}
 	if mutated.Labels == nil {
 		mutated.Labels = map[string]string{}
+		changed = true
 	}
-	mutated.Labels[labelManaged] = "true"
+	if mutated.Labels[labelManaged] != "true" {
+		mutated.Labels[labelManaged] = "true"
+		changed = true
+	}
 	if mutated.Annotations == nil {
 		mutated.Annotations = map[string]string{}
+		changed = true
 	}
-	mutated.Annotations[annotationManagedBy] = desired.Annotations[annotationManagedBy]
-	mutated.Annotations[annotationVolSyncRef] = desired.Annotations[annotationVolSyncRef]
-	mutated.OwnerReferences = desired.OwnerReferences
+	if mutated.Annotations[annotationManagedBy] != desired.Annotations[annotationManagedBy] {
+		mutated.Annotations[annotationManagedBy] = desired.Annotations[annotationManagedBy]
+		changed = true
+	}
+	if mutated.Annotations[annotationVolSyncRef] != desired.Annotations[annotationVolSyncRef] {
+		mutated.Annotations[annotationVolSyncRef] = desired.Annotations[annotationVolSyncRef]
+		changed = true
+	}
+	if !reflect.DeepEqual(mutated.OwnerReferences, desired.OwnerReferences) {
+		mutated.OwnerReferences = desired.OwnerReferences
+		changed = true
+	}
 
+	if !changed {
+		return ctrl.Result{}, nil
+	}
+
+	patch := client.MergeFrom(original)
 	if err := r.Patch(ctx, mutated, patch); err != nil {
 		return ctrl.Result{}, err
 	}
