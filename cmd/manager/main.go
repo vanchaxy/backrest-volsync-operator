@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
+	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,6 +15,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
@@ -100,7 +101,13 @@ func main() {
 func ptr[T any](v T) *T { return &v }
 
 func newLogger(level string) logr.Logger {
-	// stdr is simple and dependency-light; controller-runtime will add context fields.
-	_ = level
-	return stdr.New(nil)
+	level = strings.ToLower(strings.TrimSpace(level))
+	zl := zapcore.InfoLevel
+	if level == "debug" {
+		zl = zapcore.DebugLevel
+	}
+	return zap.New(
+		zap.UseDevMode(level == "debug"),
+		zap.Level(zl),
+	)
 }

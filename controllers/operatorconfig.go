@@ -43,13 +43,14 @@ func (s OperatorConfigSnapshot) IsVolSyncKindAllowed(kind string) bool {
 
 func LoadOperatorConfig(ctx context.Context, c client.Client, nn types.NamespacedName) (OperatorConfigSnapshot, error) {
 	if nn.Name == "" || nn.Namespace == "" {
-		return OperatorConfigSnapshot{Found: false}, nil
+		return OperatorConfigSnapshot{Found: false, BindingPolicy: BindingPolicyDisabled}, nil
 	}
 
 	var cfg v1alpha1.BackrestVolSyncOperatorConfig
 	if err := c.Get(ctx, nn, &cfg); err != nil {
 		if apierrors.IsNotFound(err) {
-			return OperatorConfigSnapshot{Found: false}, nil
+			// Treat a missing OperatorConfig as a safety default: auto-binding disabled.
+			return OperatorConfigSnapshot{Found: false, BindingPolicy: BindingPolicyDisabled}, nil
 		}
 		return OperatorConfigSnapshot{}, err
 	}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	v1 "github.com/garethgeorge/backrest/gen/go/v1"
 	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
@@ -64,8 +63,7 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 			LastTransitionTime: metav1.Now(),
 		})
 		binding.Status.ObservedGeneration = binding.Generation
-		_ = r.Status().Update(ctx, &binding)
-		return ctrl.Result{}, nil
+		return r.updateStatus(ctx, &binding)
 	}
 
 	// Default reconcile requeue on transient errors.
@@ -85,8 +83,7 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 			LastTransitionTime: metav1.Now(),
 		})
 		binding.Status.ObservedGeneration = binding.Generation
-		_ = r.Status().Update(ctx, &binding)
-		return ctrl.Result{}, nil
+		return r.updateStatus(ctx, &binding)
 	}
 
 	vsObj, err := r.getVolSyncObject(ctx, &binding)
@@ -116,7 +113,7 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 		if binding.Status.ResolvedRepositorySecret != repoSecretName {
 			binding.Status.ResolvedRepositorySecret = repoSecretName
 			binding.Status.ObservedGeneration = binding.Generation
-			_ = r.Status().Update(ctx, &binding)
+			return r.updateStatus(ctx, &binding)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -176,13 +173,30 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 		LastTransitionTime: now,
 	})
 
-	if err := r.Status().Update(ctx, &binding); err != nil {
+	if res, err := r.updateStatus(ctx, &binding); err != nil || res.RequeueAfter > 0 {
+		return res, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+type sanitizedReconcileError struct {
+	reason    string
+	errorHash string
+}
+
+func (e *sanitizedReconcileError) Error() string {
+	// Keep the error string safe for logs: no secret material, only the hash.
+	return fmt.Sprintf("%s (details omitted; errorHash=%s)", e.reason, e.errorHash)
+}
+
+func (r *BackrestVolSyncBindingReconciler) updateStatus(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding) (ctrl.Result, error) {
+	if err := r.Status().Update(ctx, binding); err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, err
 	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -346,9 +360,11 @@ func (r *BackrestVolSyncBindingReconciler) fail(ctx context.Context, binding *v1
 		LastTransitionTime: metav1.Now(),
 	})
 	binding.Status.ObservedGeneration = binding.Generation
-	_ = r.Status().Update(ctx, binding)
-	// Requeue with backoff handled by controller-runtime.
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	if res, uerr := r.updateStatus(ctx, binding); uerr != nil || res.Requeue || res.RequeueAfter > 0 {
+		return res, uerr
+	}
+	// Trigger controller-runtime exponential backoff without logging the underlying error.
+	return ctrl.Result{}, &sanitizedReconcileError{reason: reason, errorHash: errHash}
 }
 
 func isAlreadyInitializedError(err error) bool {
@@ -438,7 +454,6 @@ func computeInputHash(binding *v1alpha1.BackrestVolSyncBinding, vsObj *unstructu
 	sort.Strings(allow)
 	write("envAllowlist=" + strings.Join(allow, ","))
 	write("volsync.uid=" + string(vsObj.GetUID()))
-	write("volsync.rv=" + vsObj.GetResourceVersion())
 	write("secret.uid=" + string(sec.GetUID()))
 	write("secret.rv=" + sec.GetResourceVersion())
 	sum := h.Sum(nil)
