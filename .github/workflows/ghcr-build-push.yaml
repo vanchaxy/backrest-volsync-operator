@@ -4,29 +4,25 @@ on:
   workflow_call:
     inputs:
       push:
-        description: 'Whether to push the built image to GHCR'
+        description: Whether to push the built image to GHCR
         required: false
         type: boolean
         default: false
       platforms:
-        description: 'Comma-separated target platforms (docker/buildx)'
+        description: Comma-separated target platforms (docker/buildx)
         required: false
         type: string
-        default: 'linux/amd64'
+        default: linux/amd64
       sbom:
-        description: 'Generate SBOM (docker/build-push-action)'
+        description: Generate SBOM (docker/build-push-action)
         required: false
         type: boolean
         default: false
       provenance:
-        description: 'Generate provenance (docker/build-push-action)'
+        description: Generate provenance (docker/build-push-action)
         required: false
         type: boolean
         default: false
-
-permissions:
-  contents: read
-  packages: write
 
 concurrency:
   group: ghcr-${{ github.ref }}
@@ -34,6 +30,7 @@ concurrency:
 
 jobs:
   build:
+    name: ${{ inputs.push && 'Build and push' || 'Build' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -61,7 +58,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      - name: Build (and push on main/tags)
+      - name: Build
         uses: docker/build-push-action@v6
         with:
           context: .
