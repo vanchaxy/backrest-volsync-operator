@@ -1,220 +1,59 @@
-# Backrest VolSync Operator (prototype)
 
-Prototype Kubernetes operator that watches VolSync `ReplicationSource` / `ReplicationDestination` objects and registers the referenced Restic repository in Backrest via the Backrest API.
+# backrest-volsync-operator (prototype)
+
+Kubernetes operator that connects VolSync restic repositories (ReplicationSource/ReplicationDestination) to a Backrest instance.
 
 ## What it does
 
-- Reads `spec.restic.repository` from a VolSync object.
-- Reads the referenced Secret keys:
-  - `RESTIC_REPOSITORY` -> Backrest repo URI
-  - `RESTIC_PASSWORD` -> Backrest repo password
-  - All other non-`RESTIC_*` keys -> Backrest `repo.env` as `KEY=value` (or restrict via `spec.repo.envAllowlist`).
-- Calls Backrest `AddRepo` (upsert) using the generated Connect client.
-- Stores only a hash + non-sensitive status fields in the CR status.
+- Watches `BackrestVolSyncBinding` resources and ensures the referenced VolSync repository is registered/configured in Backrest.
+- Optionally auto-creates managed bindings for VolSync objects when enabled via `BackrestVolSyncOperatorConfig`.
 
-## Install CRD + RBAC + sample
+## What it does not
+
+- Remove repositories from Backrest.
+- Backrest Auth not tested
+
+## Custom Resources
+
+- `BackrestVolSyncBinding` (`bvb`): binds one VolSync object to one Backrest repo.
+- `BackrestVolSyncOperatorConfig`: optional operator-wide config (pause switch + auto-binding defaults/policy).
+
+## Install (Helm)
+
+The Helm chart is in `charts/backrest-volsync-operator`.
 
 ```sh
-kubectl apply -k config/
-kubectl apply -f config/samples.yaml
+helm install backrest-volsync-operator ./charts/backrest-volsync-operator -n backups --create-namespace
 ```
 
-## Install with Helm (recommended)
-
-This repo includes a Helm chart at `charts/backrest-volsync-operator`.
-
-Install into any namespace (the chart installs into `.Release.Namespace`):
+To enable auto-binding, set `operatorConfig.create=true` and configure a default Backrest URL:
 
 ```sh
-NAMESPACE=backups
-kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-
-helm install backrest-volsync-operator \
-  oci://ghcr.io/<owner>/charts/backrest-volsync-operator \
-  --namespace "$NAMESPACE" \
-  --create-namespace
+helm upgrade --install backrest-volsync-operator ./charts/backrest-volsync-operator -n backups \
+	--set operatorConfig.create=true \
+	--set operatorConfig.defaultBackrest.url=http://backrest.backups.svc:9898
 ```
 
-Override the operator image if needed:
+## Usage
+
+### Manual binding
+
+Create a `BackrestVolSyncBinding` (example: `charts/backrest-volsync-operator/examples/backrestvolsyncbinding.yaml`).
 
 ```sh
-helm upgrade --install backrest-volsync-operator \
-  oci://ghcr.io/<owner>/charts/backrest-volsync-operator \
-  --namespace "$NAMESPACE" \
-  --set image.repository=ghcr.io/<owner>/<repo> \
-  --set image.tag=latest
+kubectl apply -f charts/backrest-volsync-operator/examples/backrestvolsyncbinding.yaml
 ```
 
-Examples are not installed by default. See `charts/backrest-volsync-operator/examples/`.
+### Auto-binding
 
-## Backrest auth (optional)
+1. Create a `BackrestVolSyncOperatorConfig` (example: `charts/backrest-volsync-operator/examples/operatorconfig.yaml`).
+2. Set `spec.bindingGeneration.policy` to `Annotated` or `All`.
+3. If using `Annotated`, add annotation `backrest.garethgeorge.com/binding="true"` to eligible VolSync objects.
 
-Create a Secret referenced by `spec.backrest.authRef.name` in the same namespace as the Binding:
-
-- Bearer token:
-  - key: `token`
-- Basic auth:
-  - keys: `username`, `password`
-
-## Build + deploy
-
-This operator is standalone (no local `replace ../backrest`).
-
-### Local build
+## Development
 
 ```sh
-make fmt
 make test
+make lint
+make docker-build
 ```
-
-Build and push an image to a registry reachable by your cluster nodes (Talos uses containerd):
-
-```sh
-make docker-build IMAGE=backrest-volsync-operator:dev
-```
-
-### GitHub Actions (GHCR)
-
-The workflow builds/pushes `ghcr.io/<owner>/<repo>` on pushes to `main` and tags.
-If your repo name differs, update the default image in `config/deployment.yaml` (kustomize install) or override `image.*` via Helm.
-
-For reproducible installs, the Helm chart defaults to a pinned `image.tag` (release version). Use `--set image.tag=latest` only if you explicitly want a floating tag.
-
-#### Helm chart publishing (GHCR OCI)
-
-The workflow in `.github/workflows/helm-chart-publish-oci.yaml` publishes the Helm chart to:
-
-`oci://ghcr.io/<owner>/charts/backrest-volsync-operator`
-
-To publish a new chart version, create a tag in the form `chart-vX.Y.Z` and push it (this sets the chart `version`).
-The chart `appVersion` is read from `Chart.yaml` and is typically set to the operator image version you want the chart to deploy.
-
-```sh
-git tag chart-v0.1.0
-git push origin chart-v0.1.0
-```
-
-## Automated versioning (release-please)
-
-This repo can use release-please to automate release PRs and tags.
-
-- On pushes to `main`, release-please opens/updates release PRs based on Conventional Commits.
-- When a release PR is merged, release-please creates tags:
-  - `vX.Y.Z` for the operator image (triggers the image publish workflow)
-  - `chart-vX.Y.Z` for the Helm chart (triggers the chart publish workflow)
-
-Common commit message examples:
-
-- `fix: handle nil secret data` -> patch bump
-- `feat: add OperatorConfig allowlist` -> minor bump
-- `feat!: change default binding policy` -> breaking bump (minor while <1.0.0)
-
-### Deploy (kustomize)
-
-Apply the operator resources:
-
-```sh
-kubectl apply -k config/
-```
-
-If pulling from a private GHCR image, create an image pull secret and uncomment `imagePullSecrets` in `config/deployment.yaml`:
-
-```sh
-kubectl -n backups create secret docker-registry ghcr-pull \
-  --docker-server=ghcr.io \
-  --docker-username=<github-username> \
-  --docker-password=<github-pat-with-read:packages> \
-  --docker-email=unused@example.com
-```
-
-```sh
-kubectl apply -f config/deployment.yaml
-```
-
-## Create a Binding
-
-```yaml
-apiVersion: backrest.garethgeorge.com/v1alpha1
-kind: BackrestVolSyncBinding
-metadata:
-  name: my-app
-  namespace: backups
-spec:
-  backrest:
-    url: http://backrest.backups.svc:9898
-  source:
-    kind: ReplicationSource
-    name: my-app-data
-  repo:
-    idOverride: my-app-data
-
-```
-
-## OperatorConfig (auto-create Bindings)
-
-This operator can optionally auto-create `BackrestVolSyncBinding` objects from VolSync `ReplicationSource` / `ReplicationDestination` objects.
-
-Create a `BackrestVolSyncOperatorConfig` in the same namespace as the operator:
-
-```yaml
-apiVersion: backrest.garethgeorge.com/v1alpha1
-kind: BackrestVolSyncOperatorConfig
-metadata:
-  name: backrest-volsync-operator
-  namespace: backups
-spec:
-  # Global kill-switch (disables Backrest API calls and auto-binding).
-  paused: false
-
-  # Defaults applied to generated Bindings.
-  defaultBackrest:
-    url: http://backrest.backups.svc:9898
-    # authRef:
-    #   name: backrest-auth
-
-  bindingGeneration:
-    # Disabled | Annotated | All
-    policy: Annotated
-    # Optional restrict which VolSync kinds are eligible for auto-binding.
-    # Allowed values: ReplicationSource | ReplicationDestination
-    # If omitted/empty, both kinds are allowed.
-    # kinds: [ReplicationSource, ReplicationDestination]
-    defaultRepo:
-      # autoUnlock: true
-```
-
-### Policy behavior
-
-- `Disabled`: do not auto-create bindings.
-- `Annotated`: only auto-create when the VolSync object has `backrest.garethgeorge.com/binding: "true"`.
-- `All`: auto-create for all VolSync objects (unless opted out).
-
-### VolSync opt-in / opt-out annotation
-
-Set this annotation on a VolSync `ReplicationSource` / `ReplicationDestination`:
-
-```yaml
-metadata:
-  annotations:
-    backrest.garethgeorge.com/binding: "true"  # opt-in (for Annotated policy)
-```
-
-To force opt-out (even when policy is `All`):
-
-```yaml
-metadata:
-  annotations:
-    backrest.garethgeorge.com/binding: "false"
-```
-```
-
-## Notes / security
-
-Backrest stores `Repo.password` as plaintext in its config file. The operator avoids calling `GetConfig` and never writes credentials into status or logs, but Backrest’s own at-rest format remains unchanged.
-
-Notes:
-
-- The operator intentionally does **not** log or store secret values. If a reconcile fails, status will contain only non-sensitive metadata and an error hash.
-- On success, the operator logs `Backrest repo applied` with only the repo ID + VolSync reference.
-
-Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.

@@ -60,9 +60,6 @@ operatorConfig:
   # Defaults applied to generated bindings.
   # These map to spec.bindingGeneration.defaultRepo on the OperatorConfig.
   defaultRepo:
-    # Optional: override the repo ID used in generated bindings.
-    # idOverride: "my-repo-id"
-
     # Optional: automatically unlock the repo (if supported by Backrest).
     # Auto-unlock will remove lockfiles at the start of forget and prune operations.
     # This is potentially unsafe if the repo is shared by multiple client devices.
