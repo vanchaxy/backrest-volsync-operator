@@ -82,4 +82,4 @@ jobs:
 
       - name: Push to GHCR (OCI)
         run: |
-          helm push dist/*.tgz oci://ghcr.io/${{ github.repository }}/chart
+          helm push dist/*.tgz oci://ghcr.io/${{ github.repository }}-chart
