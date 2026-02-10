@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/vanchaxy/backrest-volsync-operator/compare/chart-v0.3.0...chart-v0.3.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* support event in events.k8s.io group ([b22ca75](https://github.com/vanchaxy/backrest-volsync-operator/commit/b22ca75eb02f641794b2b4cd05e35a23a673ce1d))
+
 ## [0.3.0](https://github.com/vanchaxy/backrest-volsync-operator/compare/chart-v0.2.0...chart-v0.3.0) (2026-02-10)
 
 
